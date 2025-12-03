@@ -1,46 +1,39 @@
-import random
+# api/app/utils.py
+from typing import Dict
 
 
-def mock_ai_validation(sentence: str, target_word: str, difficulty: str) -> dict:
+def mock_ai_validation(sentence: str, word: str, difficulty_level: str) -> Dict:
     """
-    Mock AI validation - simulates scoring and feedback
-    In production, this would connect to n8n/OpenAI
+    ฟังก์ชันจำลองการตรวจสอบจาก AI
+    - ให้คะแนนแบบง่าย ๆ จากความยาวประโยค + การมีคำ vocab
+    - คืนค่าตามรูปแบบที่ assignment ต้องการ
     """
-    sentence_lower = sentence.lower()
-    target_word_lower = target_word.lower()
-    
-    # Check if word is in sentence
-    has_word = target_word_lower in sentence_lower
-    
-    # Calculate simple score
-    word_count = len(sentence.split())
-    
-    if not has_word:
-        return {
-            "score": 0.0,
-            "level": difficulty,
-            "suggestion": f"Your sentence must include the word '{target_word}'. Please try again!",
-            "corrected_sentence": f"Remember to use '{target_word}' in your sentence."
-        }
-    
-    # Score based on length and complexity
-    if word_count < 5:
-        score = random.uniform(4.0, 6.0)
-        suggestion = "Try to make your sentence longer and more descriptive."
-    elif word_count < 10:
-        score = random.uniform(6.5, 8.5)
-        suggestion = "Good sentence! Consider adding more details or complex structures."
+    clean_sentence = sentence.strip()
+    word_in_sentence = word.lower() in clean_sentence.lower()
+
+    # ให้คะแนนจากจำนวนคำ (สูงสุด 10)
+    word_count = len(clean_sentence.split())
+    base_score = min(10.0, max(0.0, word_count * 1.0))
+
+    # ถ้ามีคำ vocab ให้โบนัส +2
+    if word_in_sentence:
+        base_score = min(10.0, base_score + 2.0)
+
+    # สร้าง feedback ตามช่วงคะแนน
+    if base_score >= 8.0:
+        suggestion = "Great job! Your sentence looks very natural."
+    elif base_score >= 6.0:
+        suggestion = "Good! You can add more detail to make it better."
     else:
-        score = random.uniform(8.0, 10.0)
-        suggestion = "Excellent! Your sentence is well-structured and descriptive."
-    
-    # Adjust score based on difficulty
-    if difficulty == 'Advanced' and word_count > 8:
-        score = min(10.0, score + 0.5)
-    
+        suggestion = "Try again. Check grammar and make a clearer sentence."
+
+    corrected = clean_sentence.capitalize()
+    if corrected and not corrected.endswith("."):
+        corrected += "."
+
     return {
-        "score": round(score, 1),
-        "level": difficulty,
+        "score": round(base_score, 1),
+        "level": difficulty_level,          # ส่ง level กลับไปด้วย
         "suggestion": suggestion,
-        "corrected_sentence": sentence  # In production, AI would correct this
+        "corrected_sentence": corrected or "",
     }
